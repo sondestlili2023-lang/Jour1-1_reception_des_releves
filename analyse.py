@@ -16,6 +16,12 @@ import phase9_trous
 import phase10_pipeline
 import phase11_duree
 import phase12_ville_heure
+import phase13_facture
+import phase14_calibration
+import phase15_incertitude
+import phase16_explications
+import phase17_zones
+import phase18_archive
 
 
 def main():
@@ -32,6 +38,12 @@ def main():
         phase10_pipeline,
         phase11_duree,
         phase12_ville_heure,
+        phase13_facture,
+        phase14_calibration,
+        phase15_incertitude,
+        phase16_explications,
+        phase17_zones,
+        phase18_archive,
     ):
         phase.main()
         print()

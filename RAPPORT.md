@@ -334,11 +334,235 @@ C'est le chiffre que le Bureau peut deposer devant le Conseil : plus bas,
 mais gagne honnetement, sur des relevés que le systeme n'a ni memorises,
 ni lus a l'avance.
 
+## Le Conseil vous croit, et c'est maintenant que les ennuis commencent
+
+« Qu'est-ce que le Bureau fait de ca ? » Un score ne decide rien, c'est
+nous qui decidons, et il faut pouvoir le defendre a voix haute -- en
+credits, pas en pourcentages.
+
+**Le modele final.** A partir d'ici, `modele_final.py` assemble ce que
+les phases 7 a 12 ont etabli : decoupe chronologique (phase 8), duree
+reconciliee (phase 11), ville/forme regroupees et heure cyclique
+(phase 12), tout appris sur l'apprentissage seul (phase 10), sans
+`comments` (phase 5). A la frontiere par defaut de 0,5, ca donne
+**rappel 50,7 % / precision 1,36 %** -- un peu different des 53,6 %/1,2 %
+de la phase 10 puisque les features de duree et de ville ont change
+depuis, mais construit exactement de la meme facon.
+
+## Phase 13 -- la facture du Bureau
+
+*Le tableau de couts vote par le Conseil ne nous est pas parvenu (perdu
+dans la transmission de l'enonce). Le seul chiffre donne explicitement
+est le ratio : un canular rate coute 15 fois plus cher qu'une fausse
+alerte. On construit la grille la plus simple qui respecte ce ratio :
+**15 credits par canular rate, 1 credit par fausse alerte**.*
+
+| Frontiere | Facture | Faux negatifs | Fausses alertes |
+|---|---|---|---|
+| 0,0 | 18 129 | 0 | 18 129 |
+| 0,3 | 13 755 | 21 | 13 440 |
+| 0,5 | **6 196** | 69 | 5 161 |
+| 0,7 | 2 732 | 122 | 902 |
+| 0,9 | 2 104 | 139 | 19 |
+| **0,941** | **2 087** | 139 | 2 |
+| 1,0 | 2 100 | 140 | 0 |
+
+- Frontiere retenue (cout minimal, balayage de tous les seuils atteignables) : **0,941**
+- Facture a 0,5 (defaut de la bibliotheque) : **6 196 credits**
+- Facture avec la frontiere retenue : **2 087 credits**
+- Ecart : **4 109 credits economises**
+
+A titre de reference, ne jamais rien signaler coute 2 100 credits : la
+frontiere optimale ne fait mieux que "ne rien signaler" que de **13
+credits**. Avec ce ratio de couts et ce modele, la marge de manoeuvre
+economique reelle est etroite -- un constat honnete, pas flatteur, mais
+c'est celui que les credits donnent.
+
+## Phase 14 -- une promesse a 80 %
+
+Le systeme trie correctement (les tranches de proba les plus hautes
+contiennent bien plus de canulars que les tranches basses) mais chiffre
+mal : sur 10 tranches a effectif egal (~1 827 relevés chacune), la
+probabilite annoncee est systematiquement bien au-dessus du taux
+reellement observe (ecart moyen **+40,8 points**). Le systeme est **trop
+confiant**, et c'est attendu : `class_weight='balanced'`, necessaire
+pour un rappel exploitable a 0,9 % de canulars, deforme les probabilites
+brutes vers le haut.
+
+| Tranche (proba brute) | n | Proba annoncee | Taux reel |
+|---|---|---|---|
+| 0,07 - 0,22 | 1 827 | 0,168 | 0,005 |
+| 0,32 - 0,36 | 1 827 | 0,340 | 0,003 |
+| 0,49 - 0,55 | 1 827 | 0,521 | 0,007 |
+| 0,64 - 1,00 | 1 827 | 0,716 | 0,018 |
+
+**Correction** : recalibrage sigmoide (Platt scaling) par validation
+croisee a 5 plis, appris sur l'apprentissage seul.
+
+| Tranche (proba corrigee) | n | Proba annoncee | Taux reel |
+|---|---|---|---|
+| 0,002 - 0,006 | 1 827 | 0,0048 | 0,0060 |
+| 0,008 - 0,009 | 1 827 | 0,0087 | 0,0071 |
+| 0,011 - 0,012 | 1 827 | 0,0116 | 0,0104 |
+| 0,013 - 0,349 | 1 827 | 0,0149 | 0,0192 |
+
+Ecart absolu moyen apres correction : **0,23 point** (contre 40,8 avant).
+Les probabilites annoncees collent maintenant a ce qui est reellement
+observe, tranche par tranche.
+
+## Phase 15 -- deux analystes, deux chiffres
+
+- Taille de la partie test : **18 269**
+- Canulars reellement presents dedans : **140**
+- Decoupes utilisees pour la fourchette (rechantillonnage du test avec
+  remise, modele fixe) : **1 000**
+
+| | Mediane | Intervalle 95 % |
+|---|---|---|
+| Rappel | 50,6 % | [43,6 % ; 59,0 %] |
+| Precision | 1,35 % | [1,06 % ; 1,68 %] |
+
+**Reponse au Conseil sur les deux analystes (0,31 et 0,34)** : la
+question est mal posee. Avec seulement 140 canulars dans notre propre
+test, l'intervalle de precision fait a lui seul 0,61 point de large --
+un ecart de 0,03 entre deux systemes ne se distingue pas du bruit
+d'echantillonnage. Il faudrait soit davantage de canulars de test, soit
+un vrai test statistique, pour affirmer qu'un des deux systemes est
+meilleur.
+
+## Phase 16 -- trois dossiers sur le bureau
+
+Frontiere de reference : 0,941 (phase 13).
+
+**Forte confiance (relevé 609, proba 0,998)** -- Birmingham (UK), forme
+sphere, duree "31 years" (phase 11). `duree_s` pese a lui seul plus que
+toutes les autres colonnes reunies (contribution +6,31, la deuxieme plus
+forte n'est que -0,67). Et ce relevé **n'est pas** marque canular par le
+Bureau : c'est une fausse alerte a tres forte confiance causee par une
+seule valeur extreme.
+
+**Juste au-dessus de la frontiere (relevé 58538, proba 0,941)** --
+Illinois, canular reel. C'est `duree_manquante` (l'indicateur de trou,
+pas une valeur de duree) qui fait basculer, avec l'etat connu et la
+position geographique.
+
+**Canular laisse passer (relevé 27841, proba 0,887)** -- Mississippi,
+forme egg, canular reel non signale. Les signaux positifs existent
+(duree manquante, forme egg) mais restent trop faibles face a un profil
+par ailleurs tres ordinaire (Etats-Unis, janvier) pour franchir une
+frontiere volontairement haute.
+
+**Classement global (permutation importance, average precision)** :
+
+| Colonne | Chute moyenne |
+|---|---|
+| `duree_manquante` | 0,0060 |
+| `heure_sin` | 0,0041 |
+| `forme_nettoyee` | 0,0036 |
+| `state` | 0,0032 |
+| `mois` | 0,0012 |
+| `latitude` | 0,0008 |
+| `ville_regroupee` | 0,0006 |
+| `duree_s` | 0,0005 |
+| `country` | 0,0000 |
+| `longitude` | -0,0004 |
+
+**Surprise** : `duree_s` (la valeur numerique de la duree) est
+avant-derniere du classement global, alors qu'elle domine, et de loin,
+l'explication du dossier "forte confiance". En moyenne, la duree brute
+n'aide presque jamais ; sur un relevé precis avec une valeur extreme,
+elle peut a elle seule faire basculer la decision. Le classement global
+et l'explication d'un dossier ne repondent pas a la meme question.
+
+## Phase 17 -- l'angle mort du Bureau
+
+| Zone | n | Canulars | % canulars | Rappel | Precision |
+|---|---|---|---|---|---|
+| us | 15 388 | 107 | 0,70 % | 47,7 % | 1,35 % |
+| ca | 617 | 7 | 1,13 % | 14,3 % | 1,12 % |
+| gb | 178 | 5 | 2,81 % | 80,0 % | 2,74 % |
+| autre | 2 086 | 21 | 1,01 % | 71,4 % | 1,24 % |
+| **global** | 18 269 | 140 | 0,77 % | 50,7 % | 1,36 % |
+
+(a la frontiere par defaut 0,5)
+
+Le rappel n'est pas le meme partout : proche du chiffre global aux
+Etats-Unis (la zone qui pese le plus), mais seulement 14,3 % au Canada
+contre 80 % au Royaume-Uni. La moyenne globale ne raconte que l'histoire
+americaine. **Attention** (phase 15) : le Canada ne compte que 7
+canulars de test, le Royaume-Uni 5 -- ces deux pourcentages bougent de
+dizaines de points si on deplace un seul relevé, ce sont des indications,
+pas des mesures fiables.
+
+A la frontiere retenue en phase 13 (0,941, tres conservatrice), le
+constat est plus dur : **le seul canular attrape par tout le systeme
+tombe dans la zone "autre"** -- Etats-Unis, Canada et Royaume-Uni
+n'en attrapent aucun. Une frontiere unique et tres haute peut donc ne
+plus rien detecter du tout dans la zone qui pese le plus lourd, sans que
+le chiffre global (illisible a cette echelle) ne le montre.
+
+**Decision** : une seule frontiere pour toutes les zones. Le Canada et
+le Royaume-Uni n'ont pas assez de canulars de test pour calibrer quoi
+que ce soit de fiable a leur echelle ; fragmenter la frontiere
+reviendrait a l'ajuster sur du bruit. Les zones hors Etats-Unis restent
+a surveiller qualitativement plutot qu'a recalibrer statistiquement pour
+l'instant.
+
+## Phase 18 -- la transmission d'archive
+
+**La courbe** (proportion de canulars par annee de publication, deja vue
+en phase 8, sur toute la periode 1998-2014) n'est pas plate : quasi
+nulle de 1998 a 2004, elle grimpe a partir de 2005, pic a 2,76 % en
+2008, puis redescend et refluctue. Le systeme a appris une definition
+moyenne d'une regle qui a change au moins trois fois en seize ans.
+
+**L'epreuve** -- apprentissage sur la moitie la plus ancienne (jusqu'au
+8 octobre 2007), test sur la moitie la plus recente (637 canulars
+dedans) :
+
+| | Rappel | Precision |
+|---|---|---|
+| Phase 8 (decoupe 80/20, ecart de temps court) | 53,6 % | 1,2 % |
+| Phase 18 (decoupe 50/50, ecart de temps maximal) | 28,7 % | 2,07 % |
+
+Le rappel s'effondre quand l'ecart temporel entre apprentissage et
+deploiement s'agrandit : la definition apprise colle de moins en moins
+a l'epoque qu'on lui demande de juger.
+
+**Ce qu'on surveille sans jamais connaitre la reponse** (la verite sur
+un canular arrive des semaines plus tard, ou jamais) :
+
+1. **Probabilite moyenne predite par mois** -- reference (apprentissage)
+   0,448 ± 0,022. Alerte si la moyenne du mois sort de [0,403 ; 0,493]
+   (2 ecarts-types).
+2. **Taux de valeurs manquantes dans les champs cles**, par mois :
+   - `country` manquant -- reference 15,5 % ± 4,2 %, alerte hors
+     [7,0 % ; 23,9 %]
+   - `duree` manquante -- reference 7,4 % ± 2,6 %, alerte hors
+     [2,3 % ; 12,5 %]
+
+   Ces deux indicateurs sont lies : `duree_manquante` est la colonne la
+   plus importante du modele (phase 16). Si son taux de trous derive,
+   c'est le signal le plus important qui change de nature sous les
+   pieds du modele.
+
+**Frequence** : mensuelle -- assez de volume (quelques milliers de
+relevés par mois historiquement) pour que les moyennes ne soient pas du
+bruit d'un jour.
+
+**Seuil de rappel des analystes** : un des deux indicateurs sort de sa
+bande a 2 ecarts-types deux mois de suite (un seul mois hors bande peut
+arriver par hasard environ 1 fois sur 20 meme sans derive reelle ; deux
+mois consecutifs, beaucoup plus rarement).
+
 ## Note pour la suite
 
-`analyse.py` enchaine les 12 phases (`phase1_ouverture.py` a
-`phase12_ville_heure.py`) d'une traite, du telechargement de la
-transmission au dernier chiffre, verifie sur un dossier vide. La sonde
+`analyse.py` enchaine les 18 phases (`phase1_ouverture.py` a
+`phase18_archive.py`) d'une traite, du telechargement de la transmission
+au dernier chiffre, verifie sur un dossier vide, en ~3 minutes. La sonde
 continue d'emettre : les scripts re-telechargent la transmission si
 `data/` est absent, donc une nouvelle transmission remplacera
 automatiquement l'ancienne au prochain `rm -rf data && python3 analyse.py`.
+
+Toutes les graines aleatoires du projet sont fixees (42, partout) : deux
+lancements donnent les memes chiffres.
