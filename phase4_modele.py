@@ -62,7 +62,14 @@ def construire_pipeline(colonnes_numeriques, colonnes_categorielles, utiliser_te
     ])
 
 
-def entrainer_evaluer(df, colonnes_numeriques=None, colonnes_categorielles=None, utiliser_texte=True, graine=GRAINE):
+def entrainer_evaluer(df, colonnes_numeriques=None, colonnes_categorielles=None, utiliser_texte=True,
+                       graine=GRAINE, idx_train=None, idx_test=None, pipeline=None):
+    """Entraine et evalue. Par defaut, decoupe aleatoire stratifiee (phases 4/5/6).
+
+    A partir de la phase 7, idx_train/idx_test permettent d'imposer une
+    decoupe deja calculee ailleurs (par evenement, chronologique...) sans
+    dupliquer la logique d'entrainement/evaluation.
+    """
     colonnes_numeriques = colonnes_numeriques or COLONNES_NUMERIQUES
     colonnes_categorielles = colonnes_categorielles or COLONNES_CATEGORIELLES
 
@@ -71,11 +78,16 @@ def entrainer_evaluer(df, colonnes_numeriques=None, colonnes_categorielles=None,
     X = df[colonnes_X]
     y = df["is_hoax"].astype(int)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, stratify=y, random_state=graine
-    )
+    if idx_train is None or idx_test is None:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, stratify=y, random_state=graine
+        )
+    else:
+        X_train, X_test = X.loc[idx_train], X.loc[idx_test]
+        y_train, y_test = y.loc[idx_train], y.loc[idx_test]
 
-    pipeline = construire_pipeline(colonnes_numeriques, colonnes_categorielles, utiliser_texte)
+    if pipeline is None:
+        pipeline = construire_pipeline(colonnes_numeriques, colonnes_categorielles, utiliser_texte)
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test)
 
@@ -86,6 +98,7 @@ def entrainer_evaluer(df, colonnes_numeriques=None, colonnes_categorielles=None,
         "n_train": len(X_train),
         "n_test": len(X_test),
         "n_canulars_test": int(y_test.sum()),
+        "pipeline": pipeline,
     }
 
 
