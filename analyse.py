@@ -10,6 +10,12 @@ import phase3_regle_canular
 import phase4_modele
 import phase5_fuite
 import phase6_stagiaire
+import phase7_evenements
+import phase8_chronologie
+import phase9_trous
+import phase10_pipeline
+import phase11_duree
+import phase12_ville_heure
 
 
 def main():
@@ -20,6 +26,12 @@ def main():
         phase4_modele,
         phase5_fuite,
         phase6_stagiaire,
+        phase7_evenements,
+        phase8_chronologie,
+        phase9_trous,
+        phase10_pipeline,
+        phase11_duree,
+        phase12_ville_heure,
     ):
         phase.main()
         print()

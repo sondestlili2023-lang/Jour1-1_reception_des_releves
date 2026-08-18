@@ -13,7 +13,7 @@ python3 analyse.py
 `analyse.py` telecharge la transmission, refait tout le travail et
 affiche les chiffres de chaque phase, d'une traite, sur une machine
 neuve. Chaque phase vit aussi dans son propre fichier (`phase1_ouverture.py`
-a `phase6_stagiaire.py`) et peut etre relancee seule.
+a `phase12_ville_heure.py`) et peut etre relancee seule.
 
 Les chiffres et decisions sont detailles dans [RAPPORT.md](RAPPORT.md).
 Le fichier de donnees n'est pas versionne (il se telecharge, voir
